@@ -1,0 +1,97 @@
+select * from film;
+select * from customer;
+select * from rental;
+select * from payment;
+
+-- Total Revenue
+Select sum(amount) as total_revenue
+From payment;
+-- total revenue - 67416.51
+
+-- Total revenue per Film
+with select f.title,f.rental_rate,sum(p.amount) as total_revenue,min(f.rating) as Rating,min(r.rental_id) as first_rental_id,min(r.rental_date) as first_rental_date
+from film as f
+left join
+inventory as i on f.film_id=i.film_id
+left join
+rental as r on i.inventory_id=r.inventory_id
+left join
+payment as p on r.rental_id=p.rental_id
+group by f.title,f.rental_rate,f.Rating
+order by total_revenue desc;
+
+
+-- Top 10 performing films
+select f.title, count(r.rental_id) as total_rentals
+from film f
+join inventory i on f.film_id=i.film_id
+join rental r on i.inventory_id=r.inventory_id
+group by f.title
+order by total_rentals desc
+limit 10;
+
+-- Total revenue by customer
+Select c.customer_id,concat(c.first_name,' ',c.last_name) name,sum(p.amount) total_revenue
+from customer c
+join payment p on c.customer_id=p.customer_id
+group by c.customer_id
+order by total_revenue desc;
+
+-- Price bucket
+select 
+case 
+    when rental_rate < 1 then 'low'
+    when rental_rate between 1 and 4 then 'medium'
+    else 'expensive'
+    end as price_bucket,
+  COUNT(*) as total_films
+from film
+group by price_bucket;
+
+-- Revenue by Cities (Top 10)
+Select ci.city, co.country, sum(p.amount) as revenue
+from payment p
+Join customer c on p.customer_id = c.customer_id
+Join address a on c.address_id = a.address_id
+Join city ci on a.city_id = ci.city_id
+Join country co on ci.country_id = co.country_id
+Group by ci.city, co.country
+Order by revenue Desc
+limit 10;
+
+-- Performance by category
+Select cat.name as category, Count(r.rental_id) as rentals
+From category cat
+Join film_category fc on cat.category_id = fc.category_id
+Join inventory i on fc.film_id = i.film_id
+Join rental r on i.inventory_id = r.inventory_id
+Group by cat.name
+Order by rentals DESC;
+
+-- highest performing stores
+select i.store_id,sum(p.amount) revenue from payment p
+join rental r on p.rental_id=r.rental_id
+join inventory i on r.inventory_id=i.inventory_id
+group by i.store_id
+order by revenue desc;
+
+-- Monthly Revenue Trend
+SELECT  DATE_FORMAT(payment_date, '%Y-%m') AS month,
+    Sum(amount) as revenue
+From payment
+Group by month
+Order by month;
+
+-- Customer rental frequency
+SELECT c.customer_id, c.first_name, COUNT(r.rental_id) AS rentals
+FROM customer c
+JOIN rental r ON c.customer_id = r.customer_id
+GROUP BY c.customer_id
+ORDER BY rentals DESC;
+
+-- Average rental duration
+SELECT f.title, AVG(DATEDIFF(r.return_date, r.rental_date)) AS avg_days
+FROM film f
+JOIN inventory i ON f.film_id = i.film_id
+JOIN rental r ON i.inventory_id = r.inventory_id
+GROUP BY f.title;
